@@ -311,7 +311,7 @@ func (n *NetworkCommand) NeedApplyIptables() bool {
 
 func (n *NetworkCommand) NeedApplyTC() bool {
 	switch n.Action {
-	case NetworkDelayAction, NetworkLossAction:
+	case NetworkDelayAction, NetworkLossAction, NetworkCorruptAction, NetworkDuplicateAction:
 		return true
 	default:
 		return false
