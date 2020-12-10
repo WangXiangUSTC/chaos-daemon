@@ -15,6 +15,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -47,4 +48,9 @@ type Experiment struct {
 	// TODO: need to improve
 	Kind           string `json:"kind"`
 	RecoverCommand string `json:"recover_command"`
+}
+
+func (e *Experiment) String() string {
+	expBytes, _ := json.Marshal(e)
+	return string(expBytes)
 }
