@@ -14,9 +14,10 @@
 package command
 
 import (
-	"fmt"
+	"os"
+	"time"
 
-	"github.com/jedib0t/go-pretty/table"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
 	"github.com/chaos-mesh/chaosd/pkg/core"
@@ -34,7 +35,7 @@ func NewSearchCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&sFlag.All, "all", "A", false, "list all chaos attacks")
 	cmd.Flags().StringVarP(&sFlag.Status, "status", "s", "", "attack status, "+
 		"supported value: created, success, error, destroyed, revoked")
-	cmd.Flags().StringVarP(&sFlag.Type, "type", "t", "", "attack type, "+
+	cmd.Flags().StringVarP(&sFlag.Kind, "kind", "k", "", "attack kind, "+
 		"supported value: network, process")
 	cmd.Flags().Uint32VarP(&sFlag.Offset, "offset", "o", 0, "starting to search attacks from offset")
 	cmd.Flags().Uint32VarP(&sFlag.Limit, "limit", "l", 0, "limit the count of attacks")
@@ -45,10 +46,9 @@ func NewSearchCommand() *cobra.Command {
 }
 
 func searchCommandFunc(cmd *cobra.Command, args []string) {
-	if len(args) == 0 {
-		ExitWithMsg(ExitBadArgs, "UID is required")
+	if len(args) > 0 {
+		sFlag.UID = args[0]
 	}
-	sFlag.UID = args[0]
 
 	if err := sFlag.Validate(); err != nil {
 		ExitWithError(ExitBadArgs, err)
@@ -61,16 +61,19 @@ func searchCommandFunc(cmd *cobra.Command, args []string) {
 		ExitWithError(ExitError, err)
 	}
 
-	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"UID", "Type", "Action", "Status", "Create Time", "Configuration"})
+	tw := tablewriter.NewWriter(os.Stdout)
+	tw.SetHeader([]string{"UID", "Kind", "Action", "Status", "Create Time", "Configuration"})
+	tw.SetBorders(tablewriter.Border{Left: false, Top: false, Right: false, Bottom: false})
+	tw.SetAlignment(3)
+	tw.SetRowSeparator("-")
+	tw.SetCenterSeparator(" ")
+	tw.SetColumnSeparator(" ")
 
 	for _, exp := range exps {
-		tw.AppendRow(table.Row{
-			exp.Uid, exp.Kind, exp.Action, exp.Status, exp.CreatedAt, exp.RecoverCommand,
+		tw.Append([]string{
+			exp.Uid, exp.Kind, exp.Action, exp.Status, exp.CreatedAt.Format(time.RFC3339), exp.RecoverCommand,
 		})
 	}
 
-	tw.Style().Options.SeparateColumns = true
-
-	fmt.Println(tw.Render())
+	tw.Render()
 }

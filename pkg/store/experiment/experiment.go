@@ -80,8 +80,8 @@ func (e *experimentStore) ListByConditions(_ context.Context, conds *core.Search
 	}
 
 	if !conds.All {
-		if len(conds.Type) > 0 {
-			db = db.Where("kind = ?", conds.Type)
+		if len(conds.Kind) > 0 {
+			db = db.Where("kind = ?", conds.Kind)
 		}
 
 		if len(conds.Status) > 0 {
@@ -89,14 +89,14 @@ func (e *experimentStore) ListByConditions(_ context.Context, conds *core.Search
 		}
 	}
 
-	order := "create_at"
+	order := "created_at"
 	if !conds.Asc {
 		order += " DESC"
 	}
 
 	if err := db.
-		Find(&exps).
 		Order(order).
+		Find(&exps).
 		Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, perr.WithStack(err)
 	}
