@@ -48,6 +48,8 @@ type NetworkCommand struct {
 	// only the packet which match the tcp flag can be accepted, others will be dropped.
 	// only set when the IPProtocol is tcp, used for partition.
 	AcceptTCPFlags string
+	DNSIp     string
+	DNSHost   string
 }
 
 var _ AttackConfig = &NetworkCommand{}
@@ -154,6 +156,18 @@ func (n *NetworkCommand) validNetworkPartition() error {
 }
 
 func (n *NetworkCommand) validNetworkDNS() error {
+	if !utils.CheckIPs(n.DNSServer) {
+		return errors.Errorf("server addresse %s not valid", n.DNSServer)
+	}
+
+	if !utils.CheckIPs(n.DNSIp) {
+		return errors.Errorf("ip addresse %s not valid", n.DNSIp)
+	}
+
+	if (len(n.DNSHost) != 0 && len(n.DNSIp) == 0) || (len(n.DNSHost) == 0 && len(n.DNSIp) != 0) {
+		return errors.Errorf("DNS host %s must match a DNS ip %s", n.DNSHost, n.DNSIp)
+	}
+
 	return nil
 }
 
@@ -419,6 +433,14 @@ func (n *NetworkCommand) ToChain(ipset string) ([]*pb.Chain, error) {
 	})
 
 	return chains, nil
+}
+
+func (n *NetworkCommand) NeedApplyEtcHosts() bool {
+	if len(n.DNSHost) > 0 || len(n.DNSIp) > 0 {
+		return true
+	}
+
+	return false
 }
 
 func NewNetworkCommand() *NetworkCommand {
