@@ -50,6 +50,7 @@ type NetworkCommand struct {
 	AcceptTCPFlags string
 	DNSIp     string
 	DNSHost   string
+	Port      string
 }
 
 var _ AttackConfig = &NetworkCommand{}
@@ -61,6 +62,7 @@ const (
 	NetworkDuplicateAction = "duplicate"
 	NetworkDNSAction       = "dns"
 	NetworkPartitionAction = "partition"
+	NetworkPortOccupied    = "occupied"
 )
 
 func (n *NetworkCommand) Validate() error {
@@ -76,6 +78,8 @@ func (n *NetworkCommand) Validate() error {
 		return n.validNetworkDNS()
 	case NetworkPartitionAction:
 		return n.validNetworkPartition()
+	case NetworkPortOccupied:
+		return n.validNetworkOccupied()
 	default:
 		return errors.Errorf("network action %s not supported", n.Action)
 	}
@@ -168,6 +172,13 @@ func (n *NetworkCommand) validNetworkDNS() error {
 		return errors.Errorf("DNS host %s must match a DNS ip %s", n.DNSHost, n.DNSIp)
 	}
 
+	return nil
+}
+
+func (n *NetworkCommand) validNetworkOccupied() error {
+	if len(n.Port) == 0 {
+		return errors.New("port is required")
+	}
 	return nil
 }
 

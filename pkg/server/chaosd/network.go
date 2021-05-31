@@ -54,6 +54,8 @@ func (networkAttack) Attack(options core.AttackConfig, env Environment) (err err
 		}
 
 		return env.Chaos.updateDNSServer(attack)
+	case core.NetworkPortOccupied:
+		return env.Chaos.applyPortOccupied(attack)
 
 	case core.NetworkDelayAction, core.NetworkLossAction, core.NetworkCorruptAction, core.NetworkDuplicateAction, core.NetworkPartitionAction:
 		if attack.NeedApplyIPSet() {
@@ -278,7 +280,8 @@ func (networkAttack) Recover(exp core.Experiment, env Environment) error {
 			}
 		}
 		return env.Chaos.recoverDNSServer(attack)
-
+	case core.NetworkPortOccupied:
+		return env.Chaos.recoverPortOccupied(attack, env.AttackUid)
 	case core.NetworkDelayAction, core.NetworkLossAction, core.NetworkCorruptAction, core.NetworkDuplicateAction, core.NetworkPartitionAction:
 		if attack.NeedApplyIPSet() {
 			if err := env.Chaos.recoverIPSet(env.AttackUid); err != nil {
@@ -378,5 +381,66 @@ func (s *Server) recoverEtcHosts(attack *core.NetworkCommand) error {
 	if err := recoverCmd.Start(); err != nil {
 		return errors.WithStack(err)
 	}
+	return nil
+}
+
+func (s *Server) applyPortOccupied(attack *core.NetworkCommand) error {
+
+	if len(attack.Port) == 0 {
+		return nil
+	}
+
+	//todo:修改对已启用端口检测
+   //err, flag := checkPortIsListened(attack.Port)
+
+	checkStatement := fmt.Sprintf("array=lsof -i:%s | awk '{print $2}' | grep -v PID;echo ${array[@]}", attack.Port)
+	cmd := exec.Command("sh","-c", checkStatement)
+
+	output, err := cmd.Output()
+	fmt.Println(string(output))
+	return errors.WithStack(err)
+
+    if len(output) == 0  {
+		c := fmt.Sprintf("nc -l %s", attack.Port)
+		cmd1 := exec.Command("sh", "-c", c)
+
+		err := cmd1.Start()
+		if err != nil {
+			errors.WithStack(err)
+		}
+		fmt.Println("exec cmd success")
+		return nil
+	} else {
+		return errors.Errorf("port has been occupied", attack.Port)
+	}
+
+}
+
+func checkPortIsListened(port string) (error, bool) {
+	checkStatement := fmt.Sprintf("array=lsof -i:%s | awk '{print $2}' | grep -v PID;echo ${array[@]}", port)
+	cmd := exec.Command("sh","-c", checkStatement)
+
+	output, err1 := cmd.Output()
+	if err1 != nil {
+		fmt.Println(err1)
+		return err1, false
+	}
+	if len(output) != 0 {
+		return nil, true
+	}
+	return nil, false
+}
+
+func (s *Server) recoverPortOccupied(attack *core.NetworkCommand, uid string) error {
+
+	c := fmt.Sprintf("lsof -i:%s | awk '{print $2}' | grep -v PID | xargs kill -9", attack.Port)
+
+	cmd := exec.Command("sh", "-c", c)
+
+	err := cmd.Start()
+	if err != nil {
+		errors.WithStack(err)
+	}
+
 	return nil
 }
