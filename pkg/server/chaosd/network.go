@@ -17,7 +17,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/chaos-mesh/chaos-mesh/pkg/bpm"
+	"github.com/pingcap/log"
+	"github.com/shirou/gopsutil/process"
+	"go.uber.org/zap"
+	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/pingcap/errors"
 
@@ -39,6 +45,8 @@ func (networkAttack) Attack(options core.AttackConfig, env Environment) (err err
 	switch attack.Action {
 	case core.NetworkDNSAction:
 		return env.Chaos.updateDNSServer(attack)
+	case core.NetworkPortOccupied:
+		return env.Chaos.applyPortOccupied(attack)
 
 	case core.NetworkDelayAction, core.NetworkLossAction, core.NetworkCorruptAction, core.NetworkDuplicateAction:
 		if attack.NeedApplyIPSet() {
@@ -204,7 +212,8 @@ func (networkAttack) Recover(exp core.Experiment, env Environment) error {
 	switch attack.Action {
 	case core.NetworkDNSAction:
 		return env.Chaos.recoverDNSServer(attack)
-
+	case core.NetworkPortOccupied:
+		return env.Chaos.recoverPortOccupied(attack, env.AttackUid)
 	case core.NetworkDelayAction, core.NetworkLossAction, core.NetworkCorruptAction, core.NetworkDuplicateAction:
 		if attack.NeedApplyIPSet() {
 			if err := env.Chaos.recoverIPSet(env.AttackUid); err != nil {
@@ -294,6 +303,84 @@ func (s *Server) recoverDNSServer(attack *core.NetworkCommand) error {
 		EnterNS: false,
 	}); err != nil {
 		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (s *Server) applyPortOccupied(attack *core.NetworkCommand) error {
+
+	if len(attack.Port) == 0 {
+		return nil
+	}
+
+	flag, err := checkPortIsListened(attack.Port)
+	if err != nil {
+		if flag {
+			return errors.Errorf("port %s has been occupied", attack.Port)
+		}
+		return errors.WithStack(err)
+	}
+
+	if flag {
+		return errors.Errorf("port %s has been occupied", attack.Port)
+	}
+
+	args := fmt.Sprintf("-p %s", attack.Port)
+	cmd := bpm.DefaultProcessBuilder("../../../tools/main/PortOccupyTool", args).Build()
+
+	cmd.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+
+	backgroundProcessManager := bpm.NewBackgroundProcessManager()
+	err = backgroundProcessManager.StartProcess(cmd)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	attack.PortPid = int32(cmd.Process.Pid)
+
+	return nil
+}
+
+func checkPortIsListened(port string) (bool, error) {
+	checkStatement := fmt.Sprintf("lsof -i:%s | awk '{print $2}' | grep -v PID", port)
+	cmd := exec.Command("sh", "-c", checkStatement)
+
+	stdout, err := cmd.CombinedOutput()
+	if err != nil {
+		if err.Error() == "exit status 1" && string(stdout) == "" {
+			return false, nil
+		}
+		log.Error(cmd.String()+string(stdout), zap.Error(err))
+		return true, errors.WithStack(err)
+	}
+
+	if string(stdout) == "" {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *Server) recoverPortOccupied(attack *core.NetworkCommand, uid string) error {
+
+	proc, err := process.NewProcess(attack.PortPid)
+	if err != nil {
+		return err
+	}
+
+	procName, err := proc.Name()
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(procName, "PortOccupyTool") {
+		log.Warn("the process is not PortOccupyTool, maybe it is killed by manual")
+		return nil
+	}
+
+	if err := proc.Kill(); err != nil {
+		log.Error("the stress-ng process kill failed", zap.Error(err))
+		return err
 	}
 
 	return nil

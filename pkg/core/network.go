@@ -43,6 +43,8 @@ type NetworkCommand struct {
 
 	// used for DNS attack
 	DNSServer string
+	Port      string
+	PortPid   int32
 }
 
 var _ AttackConfig = &NetworkCommand{}
@@ -53,6 +55,7 @@ const (
 	NetworkCorruptAction   = "corrupt"
 	NetworkDuplicateAction = "duplicate"
 	NetworkDNSAction       = "dns"
+	NetworkPortOccupied    = "occupied"
 )
 
 func (n *NetworkCommand) Validate() error {
@@ -66,6 +69,8 @@ func (n *NetworkCommand) Validate() error {
 		return n.validNetworkCommon()
 	case NetworkDNSAction:
 		return n.validNetworkDNS()
+	case NetworkPortOccupied:
+		return n.validNetworkOccupied()
 	default:
 		return errors.Errorf("network action %s not supported", n.Action)
 	}
@@ -126,6 +131,13 @@ func (n *NetworkCommand) validNetworkCommon() error {
 }
 
 func (n *NetworkCommand) validNetworkDNS() error {
+	return nil
+}
+
+func (n *NetworkCommand) validNetworkOccupied() error {
+	if len(n.Port) == 0 {
+		return errors.New("port is required")
+	}
 	return nil
 }
 
