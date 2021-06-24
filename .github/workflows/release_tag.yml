@@ -27,11 +27,6 @@ jobs:
           yum install -y python3
           alias python=python3
 
-      - name: Configure awscli
-        run: |
-          pip3 install awscli
-          printf "%s\n" ${{ secrets.AWS_ACCESS_KEY }} ${{ secrets.AWS_SECRET_KEY }} ${{ secrets.AWS_REGION }} "json" | aws configure
-
       - name: Prepare build environment
         run: |
           yum install -y gcc
@@ -61,4 +56,4 @@ jobs:
 
           # upload package
           tar czvf chaosd-${GIT_TAG}-linux-amd64.tar.gz chaosd-${GIT_TAG}-linux-amd64
-          aws s3 cp chaosd-${GIT_TAG}-linux-amd64.tar.gz ${{ secrets.AWS_BUCKET_NAME }}/chaosd-${GIT_TAG}-linux-amd64.tar.gz
+          # aws s3 cp chaosd-${GIT_TAG}-linux-amd64.tar.gz ${{ secrets.AWS_BUCKET_NAME }}/chaosd-${GIT_TAG}-linux-amd64.tar.gz
