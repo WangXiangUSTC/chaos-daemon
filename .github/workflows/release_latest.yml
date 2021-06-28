@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+      - release-*
 
 jobs:
   run:
@@ -27,11 +31,6 @@ jobs:
           yum install -y python3
           alias python=python3
 
-      - name: Configure awscli
-        run: |
-          pip3 install awscli
-          printf "%s\n" ${{ secrets.AWS_ACCESS_KEY }} ${{ secrets.AWS_SECRET_KEY }} ${{ secrets.AWS_REGION }} "json" | aws configure
-
       - name: Prepare build environment
         run: |
           yum install -y gcc
@@ -40,6 +39,12 @@ jobs:
 
       - name: Build binary
         run: make build
+
+      - name: Configure awscli
+        run: |
+          pip3 install awscli
+          printf "%s\n" ${{ secrets.AWS_ACCESS_KEY }} ${{ secrets.AWS_SECRET_KEY }} ${{ secrets.AWS_REGION }} "json" | aws configure
+
 
       - name: Upload files
         run: |
