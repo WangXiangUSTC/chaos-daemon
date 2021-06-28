@@ -42,7 +42,10 @@ jobs:
           alias python=python3
 
       - name: Build binary
-        run: make build
+        run: |
+          make build
+          go build tools/PortOccupyTool.go
+
 
       - name: Configure awscli
         run: |
@@ -65,6 +68,7 @@ jobs:
           mv bin/chaosd chaosd-latest-linux-amd64/
           mv byteman chaosd-latest-linux-amd64/tools/
           mv stress-ng chaosd-latest-linux-amd64/tools/
+          mv PortOccupyTool chaosd-latest-linux-amd64/tools/
 
           # upload package
           tar czvf chaosd-latest-linux-amd64.tar.gz chaosd-latest-linux-amd64
