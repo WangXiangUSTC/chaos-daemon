@@ -16,8 +16,9 @@
 set -euo pipefail
 
 function chaosd::version::get_version_vars() {
+  echo "GIT_COMMIT: $GIT_COMMIT"
   if [[ -n ${GIT_COMMIT-} ]] || GIT_COMMIT=$(git rev-parse "HEAD^{commit}" 2>/dev/null); then
-
+    echo "GIT_COMMIT: $GIT_COMMIT"
     # Use git describe to find the version based on tags.
     if [[ -n ${GIT_VERSION-} ]] || GIT_VERSION=$(git describe --tags --abbrev=14 "${GIT_COMMIT}^{commit}" 2>/dev/null); then
       DASHES_IN_VERSION=$(echo "${GIT_VERSION}" | sed "s/[^-]//g")
