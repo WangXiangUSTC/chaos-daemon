@@ -26,6 +26,10 @@ jobs:
           # Must use at least depth 2!
           fetch-depth: 2
 
+      - name: test
+        run: | 
+          ./hack/version.sh
+
       - name: Setup python3
         run: |
           yum install -y python3
