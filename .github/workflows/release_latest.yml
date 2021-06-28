@@ -27,6 +27,7 @@ jobs:
           yum install -y make
           yum install -y binutils
           #yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
+          rpm -U http://opensource.wandisco.com/centos/7/git/x86_64/wandisco-git-release-7-2.noarch.rpm 
           yum install -y git
           git version
 
