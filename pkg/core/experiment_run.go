@@ -52,7 +52,8 @@ type ExperimentRun struct {
 func (exp Experiment) NewRun() *ExperimentRun {
 	return &ExperimentRun{
 		ExperimentID: exp.ID,
-		UID:          uuid.New().String(),
-		Status:       RunStarted,
+		// TODO
+		UID:    uuid.New().String(),
+		Status: RunStarted,
 	}
 }
