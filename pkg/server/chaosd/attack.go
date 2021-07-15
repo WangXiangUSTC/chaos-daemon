@@ -51,6 +51,8 @@ func (s *Server) ExecuteAttack(attackType AttackType, options core.AttackConfig,
 		return
 	}
 
+	options.CompleteDefaults()
+
 	uid = options.GetUID()
 	if len(uid) == 0 {
 		uid = uuid.New().String()
